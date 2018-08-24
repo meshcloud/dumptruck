@@ -1,0 +1,12 @@
+---
+applications:
+  - name: dumptruck
+    memory: 1G
+    disk_quota: 2G
+    no-route: true
+    health-check-type: process
+    buildpack: https://github.com/cloudfoundry/multi-buildpack
+    command: ./supercronic crontab 2>&1
+services:
+  - mydb-mongodb
+  - mydb-mysql

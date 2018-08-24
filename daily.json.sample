@@ -1,0 +1,48 @@
+{
+  "encryption": "********",
+  "sources": [
+    {
+      "name": "db-prod",
+      "dbtype": "mysql",
+      "host": "db-galera-prod-0",
+      "database": "data",
+      "username": "backup",
+      "password": "********",
+      "keep": 14,
+      "tunnel": "backup@jumphost"
+    },
+    {
+      "name": "db-dev",
+      "dbtype": "mysql",
+      "host": "db-dev",
+      "database": "data"
+      "username": "backup",
+      "password": "********",
+      "keep": 7
+    },
+    {
+      "name": "store-prod",
+      "dbtype": "mongo",
+      "host": "172.16.105.19",
+      "database": "store",
+      "username": "backup",
+      "password": "********",
+      "keep": 7
+    }
+  ],
+  "storage": [
+    {
+      "auth_url": "https://ouropenstack:5000/v3",
+      "username": "backup",
+      "user_domain_id": "********",
+      "password": "********",
+      "project_id": "********",
+      "container_url": "https://ourswift/swift/v1/ourbackups"
+    }
+  ],
+  "monitor": {
+    "url": "https://ourpushgateway/",
+    "username": "push",
+    "password": "********"
+  }
+}

@@ -1,0 +1,2 @@
+0 1 * * * /app/dumptruck.py /app/daily.json
+30 * * * * /app/dumptruck.py /app/hourly.json
