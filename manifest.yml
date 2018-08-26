@@ -10,6 +10,4 @@ applications:
     services:
       - mydb-mongodb
       - mydb-mysql
-      - mydb-postgres
-    env:
-      PERLLIB: /home/vcap/deps/0/apt/usr/share/perl5 # required for pg_dump to find PgCommon.pm in @INC
+
