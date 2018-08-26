@@ -6,3 +6,4 @@ repos:
 packages:
   - mysql-client
   - mongodb-org-tools
+  - postgresql-client

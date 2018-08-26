@@ -7,6 +7,9 @@ applications:
     health-check-type: process
     buildpack: https://github.com/cloudfoundry/multi-buildpack
     command: ./supercronic crontab 2>&1
-services:
-  - mydb-mongodb
-  - mydb-mysql
+    services:
+      - mydb-mongodb
+      - mydb-mysql
+      - mydb-postgres
+    env:
+      PERLLIB: /home/vcap/deps/0/apt/usr/share/perl5 # required for pg_dump to find PgCommon.pm in @INC

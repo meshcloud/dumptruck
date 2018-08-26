@@ -6,7 +6,6 @@ set -o nounset
 
 KEY="$(dirname "$(readlink -f "$0")")/key"
 
-
 main() {
 	local dbtype host username password db path enc port
 	dbtype="$1"
@@ -23,6 +22,9 @@ main() {
 			;;
 		mongo)
 			port="27017"
+			;;
+		postgres)
+			port="5432"
 			;;
 		*)
 			echo "Unknown database type '$1'."
@@ -41,6 +43,9 @@ main() {
 			;;
 		mongo)
 			mongodump --quiet --host="$host" --username="$username" --password="$password" --db="$db" --archive
+			;;
+		postgres)
+			PGPASSWORD="$password" pg_dump -h "$host" -U "$username" --no-password "$db"
 			;;
 	esac \
 		| gzip - \
