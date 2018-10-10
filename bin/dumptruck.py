@@ -9,12 +9,16 @@ from glob import glob
 
 import requests
 
+import swift
+import rclone
 
-def backup_all(encryption, sources, storage, monitor):
+
+def backup_all(encryption, sources, storage, monitor=None):
     for source in sources:
         try:
             backup(encryption, source, storage)
-            notify(source, **monitor)
+            if monitor:
+                notify(source, **monitor)
 
         # Catch all so that one failed backup doesn't stop all others from happening
         except Exception as e:
@@ -28,9 +32,13 @@ def backup(encryption, source, storage):
     path = dump(encryption, **source)
 
     for store in storage:
-        token = auth(**store)
-        upload(path, token, store["container_url"])
-        cleanup(path, token, store["container_url"], source["keep"])
+        if store["type"] == "swift":
+            token = swift.auth(**store)
+            swift.upload(path, token, store["container_url"])
+            swift.cleanup(path, token, store["container_url"], source["keep"])
+        else:
+            rclone.upload(path, store["remote"], store["target"])
+            rclone.cleanup(path, store["remote"], store["target"], source["keep"])
 
 
 def dump(encryption, dbtype, host, username, password, database, name=None, tunnel=None, **_):
@@ -45,25 +53,6 @@ def dump(encryption, dbtype, host, username, password, database, name=None, tunn
 
     subprocess.check_call(cmd)
     return path
-
-
-def upload(path, token, container_url):
-    checksum = subprocess.check_output(["md5sum", path]).split()[0].decode()
-    res = put_object("/".join((container_url, path)), path, checksum, token)
-    if res.status_code != 201:
-        raise ValueError()
-
-
-def cleanup(path, token, container_url, keep):
-    prefix = ".".join(path.split(".")[0:-3])
-    backups = get_objects(container_url, token)
-    backups = sorted(b for b in backups if b.startswith(prefix))
-
-    to_delete = backups[0:-keep]
-    for obj in to_delete:
-        res = delete_object("/".join((container_url, obj)), token)
-        if res.status_code != 204:
-            raise ValueError("Unexcpected status {}.".format(res.status))
 
 
 def remove_files():
@@ -82,54 +71,6 @@ def notify(source, username, password, url):
     url = "{root}/metrics/job/dumptruck/instance/{name}".format(root=url, **source)
     resp = requests.post(url, data=data, auth=requests.auth.HTTPBasicAuth(username, password))
     print(resp.text)
-
-
-def auth(auth_url, username, password, project_id, user_domain_id, **_):
-    payload = {
-        "auth": {
-            "identity": {
-                "methods": ["password"],
-                "password": {
-                    "user": {
-                        "name": username,
-                        "domain": {"id": user_domain_id},
-                        "password": password
-                    }
-                }
-            },
-            "scope": {
-                "project": {
-                    "id": project_id
-                }
-            }
-        }
-    }
-    url = auth_url + "/auth/tokens"
-    res = requests.post(url, json=payload)
-    return res.headers["X-Subject-Token"]
-
-
-def put_object(url, path, checksum, token):
-    headers = {
-        "X-Auth-Token": token,
-        "ETag": checksum,
-        "Content-Length": str(os.path.getsize(path))
-    }
-    with open(path, "rb") as f:
-        return requests.put(url, data=f, headers=headers)
-
-def get_objects(url, token):
-    headers = {
-        "X-Auth-Token": token
-    }
-    res = requests.get(url, headers=headers)
-    return res.text.split("\n")
-
-def delete_object(url, token):
-    headers = {
-        "X-Auth-Token": token
-    }
-    return requests.delete(url, headers=headers)
 
 
 def main():
