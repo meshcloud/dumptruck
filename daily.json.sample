@@ -32,12 +32,18 @@
   ],
   "storage": [
     {
+      "type": "swift",
       "auth_url": "https://ouropenstack:5000/v3",
       "username": "backup",
       "user_domain_id": "********",
       "password": "********",
       "project_id": "********",
       "container_url": "https://ourswift/swift/v1/ourbackups"
+    },
+    {
+        "type: "rclone",
+        "remote: "sftp1",
+        "target: "backups"
     }
   ],
   "monitor": {

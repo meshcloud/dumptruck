@@ -49,6 +49,7 @@ applications:
           ],
           "storage": [
             {
+              "type": "swift"
               "auth_url": "https://ouropenstack:5000/v3",
               "username": "backup",
               "user_domain_id": "********",
@@ -63,5 +64,3 @@ applications:
             "password": "********"
           }
         }
-
-
