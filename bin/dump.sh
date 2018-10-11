@@ -6,7 +6,11 @@ set -o nounset
 
 KEY="$(dirname "$(readlink -f "$0")")/key"
 
-main() {
+_enc() {
+	openssl enc -aes-256-cbc -md sha256 -salt "$@"
+}
+
+dump() {
 	local dbtype host username password db path enc port
 	dbtype="$1"
 	host="$2"
@@ -16,21 +20,7 @@ main() {
 	path="$6"
 	enc="$7"
 
-	case $dbtype in
-		mysql)
-			port="3306"
-			;;
-		mongo)
-			port="27017"
-			;;
-		postgres)
-			port="5432"
-			;;
-		*)
-			echo "Unknown database type '$1'."
-			exit 1
-			;;
-	esac
+	port="$(dbport "$dbtype")"
 
 	if [[ $# -gt 7 ]]; then
 		tunnel "$host" "$8" "$port"
@@ -49,7 +39,62 @@ main() {
 			;;
 	esac \
 		| gzip - \
-		| openssl enc -aes-256-cbc -md sha256 -salt -k "$enc" -out "$path"
+		| _enc -k "$enc" -out "$path"
+}
+
+
+restore() {
+	local dbtype host username password db path enc port
+	dbtype="$1"
+	host="$2"
+	username="$3"
+	password="$4"
+	db="$5"
+	path="$6"
+	enc="$7"
+
+	port="$(dbport "$dbtype")"
+
+	if [[ $# -gt 7 ]]; then
+		tunnel "$host" "$8" "$port"
+		host="127.0.0.1"
+	fi
+
+	_enc -d -k "$enc" -in "$path" \
+	| gunzip - \
+	| case $dbtype in
+		mysql)
+			mysql -h "$host" -u "$username" -p"$password" "$db"
+			;;
+		mongo)
+			mongorestore --quiet --host="$host" --username="$username" --password="$password" --db="$db" --archive
+			;;
+		postgres)
+			PGPASSWORD="$password" psql -h "$host" -U "$username" --no-password "$db"
+			;;
+	esac
+}
+
+
+dbport() {
+	local dbtype
+	dbtype="$1"
+
+	case $dbtype in
+		mysql)
+			echo "3306"
+			;;
+		mongo)
+			echo "27017"
+			;;
+		postgres)
+			echo "5432"
+			;;
+		*)
+			echo "Unknown database type '$1'."
+			exit 1
+			;;
+	esac
 }
 
 
@@ -67,6 +112,6 @@ tunnel() {
 	sleep 10
 }
 
-main "$@"
+"$1" "${@:2}"
 
 # vim:set noet:

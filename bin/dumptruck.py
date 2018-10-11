@@ -13,6 +13,9 @@ import swift
 import rclone
 
 
+ROOT = os.path.dirname(os.path.realpath(__file__))
+
+
 def backup_all(encryption, sources, storage, monitor=None):
     for source in sources:
         try:
@@ -46,8 +49,7 @@ def dump(encryption, dbtype, host, username, password, database, name=None, tunn
 
     path = ".".join((name, timestamp, "gz.enc"))
 
-    root = os.path.dirname(os.path.realpath(__file__))
-    cmd = [root + "/dump.sh", dbtype, host, username, password, database, path, encryption]
+    cmd = [ROOT + "/dump.sh", "dump", dbtype, host, username, password, database, path, encryption]
     if tunnel:
         cmd.append(tunnel)
 
@@ -73,11 +75,63 @@ def notify(source, username, password, url):
     print(resp.text)
 
 
+def restore(name, file, encryption, sources, storage, **_):
+    for s in sources:
+        if s["name"] == name:
+            source = s
+            break
+    else:
+        print("No database '{}' in config.".format(name))
+        return
+
+    for store in storage:
+        try:
+            if store["type"] == "swift":
+                token = swift.auth(**store)
+                swift.save_object(token, store["container_url"], file, ".")
+            else:
+                rclone.save_object(store["remote"], store["target"], file, ".")
+            break
+        except Exception as e:
+            print("Failed to get {} with error:", e)
+            continue
+    else:
+        print("Backup could not be retrieved, aborting restore.")
+
+    dbtype = source["dbtype"]
+    host = source["host"]
+    username = source["username"]
+    password = source["password"]
+    database = source["database"]
+    tunnel = source.get("tunnel", None)
+    path = "./" + file
+
+    cmd = [ROOT + "/dump.sh", "restore", dbtype, host, username, password, database, path, encryption]
+    if tunnel:
+        cmd.append(tunnel)
+    subprocess.check_call(cmd)
+
+    remove_files()
+
+
 def main():
     path = sys.argv[1]
     with open(path) as f:
         config = json.load(f)
+
+    if len(sys.argv) == 2:
         backup_all(**config)
+
+    elif len(sys.argv) == 4:
+        name = sys.argv[2]
+        dump = sys.argv[3]
+        restore(name, dump, **config)
+
+    else:
+        print(
+            "Usage: {} <config.json>  perform database backups according to <config.json>\n",
+            "or     {} <config.json> <source_name> <dump>  takes settings from <config.json> and downloads <dump> from a storage provider and tries to restore it to the database with name <source>"
+        )
 
 
 if __name__ == "__main__":

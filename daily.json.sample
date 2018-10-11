@@ -41,9 +41,9 @@
       "container_url": "https://ourswift/swift/v1/ourbackups"
     },
     {
-        "type: "rclone",
-        "remote: "sftp1",
-        "target: "backups"
+      "type: "rclone",
+      "remote: "sftphost",
+      "target: "backups"
     }
   ],
   "monitor": {
