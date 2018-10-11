@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 import os
+import shutil
 
 import requests
 
@@ -47,6 +48,17 @@ def delete_object(url, token):
         "X-Auth-Token": token
     }
     return requests.delete(url, headers=headers)
+
+def save_object(token, container_url, obj, target):
+    url = "/".join((container_url, obj))
+    headers = {
+        "X-Auth-Token": token
+    }
+    res = requests.get(url, headers=headers, stream=True)
+
+    path = "/".join((target, obj))
+    with open(path, 'wb') as f:
+        shutil.copyfileobj(res.raw, f)
 
 
 def auth(auth_url, username, password, project_id, user_domain_id, **_):

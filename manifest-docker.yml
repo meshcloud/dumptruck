@@ -56,6 +56,11 @@ applications:
               "password": "********",
               "project_id": "********",
               "container_url": "https://ourswift/swift/v1/ourbackups"
+            },
+            {
+              "type: "rclone",
+              "remote: "sftphost",
+              "target: "backups"
             }
           ],
           "monitor": {
@@ -64,3 +69,10 @@ applications:
             "password": "********"
           }
         }
+      CONFIG_RCLONE: |
+        [sftphost]
+        type = sftp
+        host = remote
+        user = root
+        pass = 5OAHQo77-bavIUJcGvG5kCV85jM
+        port = 22

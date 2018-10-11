@@ -21,3 +21,8 @@ def delete_object(remote, target, obj):
     path = "{}:{}/{}".format(remote, target, obj)
     cmd = ["rclone", "--config", "rclone", "delete", path]
     subprocess.check_call(cmd)
+
+def save_object(remote, target, obj, dest):
+    path = "{}:{}/{}".format(remote, target, obj)
+    cmd = ["rclone", "--config", "rclone", "copy", path, dest]
+    subprocess.check_call(cmd)
