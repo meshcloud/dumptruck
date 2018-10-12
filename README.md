@@ -20,15 +20,15 @@ Timestamps of successful backups are exported to a [Prometheus push gateway](htt
 
 ### Sources
 
-```json
+```text
 {
-  "name": "db-prod",  // internal name for this data source - used to generate filenames
-  "dbtype": "mysql",  // supported databases are 'mysql', 'postgres' and 'mongo'
+  "name": "db-prod",           // internal name for this data source - used to generate filenames
+  "dbtype": "mysql",           // supported databases are 'mysql', 'postgres' and 'mongo'
   "host": "db-galera-prod-0",
-  "database": "data",  // actual database name
-  "username": "backup",  // database credentials
+  "database": "data",          // actual database name
+  "username": "backup",        // database credentials
   "password": "********",
-  "keep": 14,  // older backups will be deleted if there are more than this many
+  "keep": 14,                  // older backups will be deleted if there are more than this many
   "tunnel": "backup@jumphost"  // optional user@host when the connection requires SSH tunneling
 }
 ```
@@ -39,7 +39,7 @@ To backup databases which are not connected to the same network you can specify 
 
 To store our backups in Swift buckets we need to supply credentials for a user:
 
-```json
+```text
 {
   "type": "swift",
   "auth_url": "https://ouropenstack:5000/v3",
@@ -52,11 +52,11 @@ To store our backups in Swift buckets we need to supply credentials for a user:
 ```
 
 We can also use Rclone to store our dumps somewhere. This will require an additional Rclone config file `rclone`.
-```json
+```text
 {
   "type: "rclone",
   "remote: "sftphost",  // name of a remote to use from the rclone config file
-  "target: "backups"  // store backups in sftphost:backups/<dump>
+  "target: "backups"    // store backups in sftphost:backups/<dump>
 }
 ```
 
