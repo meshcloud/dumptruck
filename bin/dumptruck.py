@@ -122,6 +122,11 @@ def main():
     if len(sys.argv) == 2:
         backup_all(**config)
 
+    if len(sys.argv) == 3:
+        name = sys.argv[2]
+        config["sources"] = [name]
+        backup_all(**config)
+
     elif len(sys.argv) == 4:
         name = sys.argv[2]
         dump = sys.argv[3]
@@ -130,6 +135,7 @@ def main():
     else:
         print(
             "Usage: {} <config.json>  perform database backups according to <config.json>\n",
+            "or     {} <config.json> <source_name> perform a single database backup according to <config.json>\n",
             "or     {} <config.json> <source_name> <dump>  takes settings from <config.json> and downloads <dump> from a storage provider and tries to restore it to the database with name <source>"
         )
 
