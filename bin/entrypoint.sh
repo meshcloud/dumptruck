@@ -5,11 +5,16 @@ set -o pipefail
 set -o nounset
 
 main() {
-	echo "$CRONTAB" > crontab
-	echo "$CONFIG_JSON" > config.json
+    # write config files for all *_CONFIG_JSON env vars
+    ./configure.py
+
+    # write crontab, mandatory
+    echo "$CRONTAB" > crontab
+    
+    # rclone is optional
     echo "${CONFIG_RCLONE:-}" > rclone
 
-	./supercronic /app/crontab 2>&1
+    ./supercronic /app/crontab 2>&1
 }
 
 main "$@"

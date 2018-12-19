@@ -79,9 +79,9 @@ A public docker build of this repo is available at DockerHub [meshcloud/dumptruc
 
 The default entrypoint supports environment variables for easily bootstrapping a single backup configuration without having to build your own docker image on top of the official build.
 
-`CRONTAB`: a simple cronstring like `0 1 * * * /app/dumptruck.py /app/config.json`. Must point to `/app/config.json`. 
+`CRONTAB`: a simple cronstring like `0 1 * * * /app/dumptruck.py /app/config.json`. Must point to `/app/config.json`
 
-`CONFIG_JSON`: the full configuration that will be made available at `/app/config.json` at runtime.
+`*_CONFIG_JSON`: the content of any environment variable ending with `_CONFIG_JSON`  will be made available at `/app/*.config.json` at runtime.
 
 `CONFIG_RCLONE`: a Rclone configuration that will be made available at `/app/rclone` at runtime.
 
