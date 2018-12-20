@@ -20,9 +20,8 @@ ROOT = os.path.dirname(os.path.realpath(__file__))
 def backup_all(encryption, sources, storage, monitor=None):
     for source in sources:
         try:
-            print("Backing up ", source["name"], "...")
+            print("Backing up", source["name"], "...")
             backup(encryption, source, storage)
-            print("Backup completed")
             if monitor:
                 notify(source, **monitor)
 
@@ -37,6 +36,7 @@ def backup_all(encryption, sources, storage, monitor=None):
 
 def backup(encryption, source, storage):
     path = dump(encryption, **source)
+    print("Backup completed:", path)
 
     for store in storage:
         if store["type"] == "swift":
