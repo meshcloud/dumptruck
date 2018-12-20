@@ -12,7 +12,6 @@ applications:
       - mydb-mysql
       - mydb-postgres
     env:
-      PATH: /usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin # cf mucks with the path when using `cf ssh`, this fixes it
       CRONTAB: |
         0 1 * * * /app/dumptruck.py /app/config.json
       CONFIG_JSON: |

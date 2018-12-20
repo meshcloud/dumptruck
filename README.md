@@ -88,6 +88,12 @@ The default entrypoint supports environment variables for easily bootstrapping a
 See [manifest-docker.yml](manifest-docker.yml) for an example of how we can use this approach to deploy to Cloud Foundry.
 You can of course also launch the container with a different entrypoint and skip this default bootstrapping.
 
+> When using `cf ssh` to manually run dumptruck, make sure to fix the `PATH` first because Cloud Foundry will change it in a way that makes it impossible to run python in the correct environment.
+
+```bash
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+```
+
 ## Restore
 
 The dumptruck can also be used to restore databases.

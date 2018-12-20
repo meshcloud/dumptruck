@@ -5,6 +5,7 @@ import os
 import os.path
 import subprocess
 import sys
+import traceback
 from glob import glob
 
 import requests
@@ -19,13 +20,16 @@ ROOT = os.path.dirname(os.path.realpath(__file__))
 def backup_all(encryption, sources, storage, monitor=None):
     for source in sources:
         try:
+            print("Backing up ", source["name"], "...")
             backup(encryption, source, storage)
+            print("Backup completed")
             if monitor:
                 notify(source, **monitor)
 
         # Catch all so that one failed backup doesn't stop all others from happening
         except Exception as e:
             print("Backup failed with:", e)
+            traceback.print_exc()
 
         finally:
             remove_files()
