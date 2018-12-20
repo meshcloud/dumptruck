@@ -67,7 +67,7 @@ restore() {
 			mysql -h "$host" -u "$username" -p"$password" "$db"
 			;;
 		mongo)
-			mongorestore --quiet --host="$host" --username="$username" --password="$password" --db="$db" --archive
+			mongorestore -vvv --host="$host" --username="$username" --password="$password" --db="$db" --archive --nsFrom='$prefix$.$suffix$' --nsTo="$db.\$suffix\$" --nsInclude="*"
 			;;
 		postgres)
 			PGPASSWORD="$password" psql -h "$host" -U "$username" --no-password "$db"
