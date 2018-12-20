@@ -77,13 +77,13 @@ Though the crontab should be usable with any cron demon we use [supercronic](htt
 
 A public docker build of this repo is available at DockerHub [meshcloud/dumptruck](https://hub.docker.com/r/meshcloud/dumptruck/).
 
-The default entrypoint supports environment variables for easily bootstrapping a single backup configuration without having to build your own docker image on top of the official build.
+The default entrypoint supports **environment variables** for easily bootstrapping a single backup configuration without having to build your own docker image on top of the official build.
 
-`CRONTAB`: a simple cronstring like `0 1 * * * /app/dumptruck.py /app/config.json`. Must point to `/app/config.json`
 
-`*_CONFIG_JSON`: the content of any environment variable ending with `_CONFIG_JSON`  will be made available at `/app/*.config.json` at runtime.
-
-`CONFIG_RCLONE`: a Rclone configuration that will be made available at `/app/rclone` at runtime.
+ - `CRONTAB`: a simple cronstring like `0 1 * * * /app/dumptruck.py /app/config.json`. Must point to `/app/config.json`.
+ - `*_CONFIG_JSON`: the content of any environment variable ending with `_CONFIG_JSON`  will be made available at `/app/*.config.json` at runtime.
+ - `CONFIG_RCLONE`: a Rclone configuration that will be made available at `/app/rclone` at runtime.
+ - `TUNNEL_SSH_KEY`: an SSH key to use for creating tunnels to remote hosts (when `tunnel` is configured on the [Source](#sources)). Will be made available at `/app/key` at runtime.
 
 See [manifest-docker.yml](manifest-docker.yml) for an example of how we can use this approach to deploy to Cloud Foundry.
 You can of course also launch the container with a different entrypoint and skip this default bootstrapping.

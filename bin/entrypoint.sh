@@ -11,8 +11,10 @@ main() {
     # write crontab, mandatory
     echo "$CRONTAB" > crontab
     
-    # rclone is optional
+    # optional configuration
     echo "${CONFIG_RCLONE:-}" > rclone
+    echo "${TUNNEL_SSH_KEY:-}" > key
+    chmod 600 key
 
     ./supercronic /app/crontab 2>&1
 }

@@ -1,3 +1,11 @@
+1.2 Dec 20, 2018
+====================
+
+* Use official mongo 3.6 tools instead of debian package
+* Fix mongorestore to a different database
+* Improve logging for backup operations and errors
+* add `SSH_TUNNEL_KEY` environment variable for configuring the SSH tunnel key
+
 1.1 Dec 20, 2018
 ====================
 
