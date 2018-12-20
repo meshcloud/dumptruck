@@ -11,6 +11,6 @@ def main():
 
             with open(name, "w") as text_file:
                 text_file.write(v)
-            
+
 if __name__ == "__main__":
     main()

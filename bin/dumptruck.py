@@ -122,9 +122,9 @@ def main():
     if len(sys.argv) == 2:
         backup_all(**config)
 
-    if len(sys.argv) == 3:
+    elif len(sys.argv) == 3:
         name = sys.argv[2]
-        config["sources"] = [name]
+        config["sources"] = list(filter(lambda x: x["name"] == name, config["sources"]))
         backup_all(**config)
 
     elif len(sys.argv) == 4:
