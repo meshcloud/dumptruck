@@ -7,7 +7,7 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" > /etc
         mysql-client \
         mongo-tools \
         postgresql-client-10 \
-	&& rm -rf /var/lib/apt/lists/*
+        && rm -rf /var/lib/apt/lists/*
 
 RUN wget "https://downloads.rclone.org/rclone-current-linux-amd64.deb" \
     && dpkg -i ./rclone-current-linux-amd64.deb \

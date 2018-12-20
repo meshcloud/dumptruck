@@ -1,0 +1,14 @@
+1.1 Dec 20, 2018
+====================
+
+* Add a command to backup a single source only
+* Remove multi-buildpack build, now supporting docker only
+  - multi-buildpack was slow to `cf push` iterate
+  - multi-buildpack also had problems with postgresql clients
+* Enhance docker auto-configuration to consumer `*_CONFIG_JSON` environment variables 
+  - now writes `*_CONFIG_JSON` env vars to individual `*.config.json` files
+
+1.0 Oct 17, 2018
+====================
+
+* Initial release
