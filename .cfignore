@@ -1,4 +1,0 @@
-*.sql
-*.sql.gz
-docker-compose.yml
-Dockerfile
