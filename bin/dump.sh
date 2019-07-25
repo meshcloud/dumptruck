@@ -10,8 +10,24 @@ _enc() {
 	openssl enc -aes-256-cbc -md sha256 -salt "$@"
 }
 
-dump() {
-	local dbtype host username password db path enc port
+dump_ravendb() {
+	local url cert key database collections path enc options
+	url="$1"
+	cert="$2"
+	key="$3"
+	database="$4"
+	collections="$5"
+	path="$6"
+	enc="$7"
+
+	options="$(printf 'DownloadOptions={"Collections":%s,"IncludeExpired":true,"RemoveAnalyzers":false,"OperateOnTypes":"DatabaseRecord,Documents,Conflicts,Indexes,Identities,CompareExchange,CounterGroups,Attachments,Subscriptions","MaxStepsForTransformScript":10000}' "$collections")"
+
+	curl -sfk "$url/databases/$database/smuggler/export" --cert "$cert" --key "$key" --data-binary "$options" \
+		| _enc -k "$enc" -out "$path"
+}
+
+dump_other() {
+	local dbtype host username password db path enc collections tunnel port
 	dbtype="$1"
 	host="$2"
 	username="$3"
@@ -19,11 +35,13 @@ dump() {
 	db="$5"
 	path="$6"
 	enc="$7"
+	collections="${8:-}"
+	tunnel="${9:-}"
 
 	port="$(dbport "$dbtype")"
 
-	if [[ $# -gt 7 ]]; then
-		tunnel "$host" "$8" "$port"
+	if [[ -n $tunnel ]]; then
+		tunnel "$host" "$tunnel" "$port"
 		host="127.0.0.1"
 	fi
 
@@ -42,8 +60,7 @@ dump() {
 		| _enc -k "$enc" -out "$path"
 }
 
-
-restore() {
+restore_other() {
 	local dbtype host username password db path enc port
 	dbtype="$1"
 	host="$2"
@@ -75,6 +92,20 @@ restore() {
 	esac
 }
 
+restore_ravendb() {
+	local url cert key database path enc options
+	url="$1"
+	cert="$2"
+	key="$3"
+	database="$4"
+	path="$5"
+	enc="$6"
+
+	options='importOptions={"IncludeExpired":true,"RemoveAnalyzers":false,"OperateOnTypes":"DatabaseRecord,Documents,Conflicts,Indexes,RevisionDocuments,Identities,CompareExchange,Counters,Attachments,Subscriptions"}'
+
+	_enc -d -k "$enc" -in "$path" \
+	| curl -fk "$url/databases/$database/smuggler/import" --cert "$cert" --key "$key" -F "$options" -F "file=@-"
+}
 
 dbport() {
 	local dbtype

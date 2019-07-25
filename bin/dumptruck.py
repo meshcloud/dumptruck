@@ -15,7 +15,7 @@ import rclone
 
 
 ROOT = os.path.dirname(os.path.realpath(__file__))
-
+DUMP = ROOT + "/dump.sh"
 
 def backup_all(encryption, sources, storage, monitor=None):
     for source in sources:
@@ -35,7 +35,7 @@ def backup_all(encryption, sources, storage, monitor=None):
 
 
 def backup(encryption, source, storage):
-    path = dump(encryption, **source)
+    path = dump(encryption, source)
     print("Backup completed:", path)
 
     for store in storage:
@@ -43,22 +43,38 @@ def backup(encryption, source, storage):
             token = swift.auth(**store)
             swift.upload(path, token, store["container_url"])
             swift.cleanup(path, token, store["container_url"], source["keep"])
-        else:
+        elif store["type"] == "rclone":
             rclone.upload(path, store["remote"], store["target"])
             rclone.cleanup(path, store["remote"], store["target"], source["keep"])
 
 
-def dump(encryption, dbtype, host, username, password, database, name=None, tunnel=None, **_):
+def dump_other(encryption, dbtype, host, username, password, database, name=None, tunnel="", **_):
     timestamp = time.strftime("%Y%m%d-%H%M", time.gmtime())
 
     path = ".".join((name, timestamp, "gz.enc"))
 
-    cmd = [ROOT + "/dump.sh", "dump", dbtype, host, username, password, database, path, encryption]
-    if tunnel:
-        cmd.append(tunnel)
+    cmd = [DUMP, "dump_other", dbtype, host, username, password, database, path, encryption, tunnel]
 
     subprocess.check_call(cmd)
     return path
+
+def dump_ravendb(encryption, timestamp, url, cert, key, database, name, collections=None, **_):
+    path = ".".join((name, timestamp, "ravendbdump.enc"))
+    params = [url, cert, key, database, json.dumps(collections), path, encryption]
+
+    cmd = [DUMP, "dump_ravendb", *params]
+    subprocess.check_call(cmd)
+
+    return path
+
+def dump(encryption, source):
+    timestamp = time.strftime("%Y%m%d-%H%M", time.gmtime())
+    dbtype = source["dbtype"]
+
+    if dbtype == "ravendb":
+        return dump_ravendb(encryption, timestamp, **source)
+
+    return dump_other(encryption, **source)
 
 
 def remove_files():
@@ -93,8 +109,10 @@ def restore(name, file, encryption, sources, storage, **_):
             if store["type"] == "swift":
                 token = swift.auth(**store)
                 swift.save_object(token, store["container_url"], file, ".")
-            else:
+            elif store["type"] == "rclone":
                 rclone.save_object(store["remote"], store["target"], file, ".")
+            else:
+                continue
             break
         except Exception as e:
             print("Failed to get {} with error:", e)
@@ -103,14 +121,24 @@ def restore(name, file, encryption, sources, storage, **_):
         print("Backup could not be retrieved, aborting restore.")
 
     dbtype = source["dbtype"]
-    host = source["host"]
-    username = source["username"]
-    password = source["password"]
-    database = source["database"]
-    tunnel = source.get("tunnel", None)
-    path = "./" + file
 
-    cmd = [ROOT + "/dump.sh", "restore", dbtype, host, username, password, database, path, encryption]
+    if dbtype == "ravendb":
+        return restore_ravendb(file, encryption, **source)
+
+    return restore_other("./" + file, encryption, **source)
+
+
+def restore_other(path, encryption, dbtype, host, username, password, database, tunnel=None, **_):
+    cmd = [DUMP, "restore_other", dbtype, host, username, password, database, path, encryption]
+    if tunnel:
+        cmd.append(tunnel)
+    subprocess.check_call(cmd)
+
+    remove_files()
+
+
+def restore_ravendb(path, encryption, url, cert, key, database, tunnel=None, **_):
+    cmd = [DUMP, "restore_ravendb", url, cert, key, database, path, encryption]
     if tunnel:
         cmd.append(tunnel)
     subprocess.check_call(cmd)
