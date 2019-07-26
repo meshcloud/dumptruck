@@ -23,11 +23,12 @@ def backup_all(encryption, sources, storage, monitor=None):
             print("Backing up", source["name"], "...")
             backup(encryption, source, storage)
             if monitor:
-                notify(source, **monitor)
+                notify_success(source, **monitor)
 
         # Catch all so that one failed backup doesn't stop all others from happening
         except Exception as e:
             print("Backup failed with:", e)
+            notify_failure(source, **monitor)
             traceback.print_exc()
 
         finally:
@@ -82,18 +83,34 @@ def remove_files():
         os.remove(path)
 
 
-def notify(source, username, password, url):
+def notify(source, username, password, url, data):
+    url = "{root}/metrics/job/dumptruck/instance/{name}".format(root=url, **source)
+    resp = requests.post(url, data=data, auth=requests.auth.HTTPBasicAuth(username, password))
+    print(resp.text)
+
+def notify_success(source, username, password, url):
     source = dict(source)
     source.setdefault("database", "")
     data = "\n".join((
         '# TYPE backup_time_seconds gauge',
         '# HELP backup_time_seconds Last Unix time when this source was backed up.',
-        'backup_time_seconds {time}\n'.format(time=time.time())
-    ))
-    url = "{root}/metrics/job/dumptruck/instance/{name}".format(root=url, **source)
-    resp = requests.post(url, data=data, auth=requests.auth.HTTPBasicAuth(username, password))
-    print(resp.text)
+        'backup_time_seconds{{database="{database}",type="{dbtype}"}} {time}\n'
+        '# TYPE backup_status gauge',
+        '# HELP backup_status Indicates success/failure of the last backup attempt.',
+        'backup_status{{database="{database}",type="{dbtype}"}} 1\n'
+    )).format(database=source["database"], dbtype=source["dbtype"], time=time.time())
+    notify(source, username, password, url, data)
 
+def notify_failure(source, username, password, url):
+    source = dict(source)
+    source.setdefault("database", "")
+
+    data = "\n".join((
+        '# TYPE backup_status gauge',
+        '# HELP backup_status Indicates success/failure of the last backup attempt.',
+        'backup_status{{database="{database}",type="{dbtype}"}} -1\n'
+    )).format(database=source["database"], dbtype=source["dbtype"])
+    notify(source, username, password, url, data)
 
 def restore(name, file, encryption, sources, storage, **_):
     for s in sources:
