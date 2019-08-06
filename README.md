@@ -1,6 +1,6 @@
 # Dumptruck
 
-Simple solution for backing up MySQL, PostgreSQL and Mongo databases with Swift and Rclone.
+Simple solution for backing up MySQL, PostgreSQL, MongoDB and RavenDB databases to Swift and Rclone targets, while monitoring backups with Prometheus.
 
 ## Configuration
 
