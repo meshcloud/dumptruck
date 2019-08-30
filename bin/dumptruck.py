@@ -79,7 +79,7 @@ def dump(encryption, source):
 
 
 def remove_files():
-    for path in glob("*.gz.enc"):
+    for path in glob("*.enc"):
         os.remove(path)
 
 
