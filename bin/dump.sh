@@ -103,6 +103,20 @@ restore_ravendb() {
 
 	options='importOptions={"IncludeExpired":true,"RemoveAnalyzers":false,"OperateOnTypes":"DatabaseRecord,Documents,Conflicts,Indexes,RevisionDocuments,Identities,CompareExchange,Counters,Attachments,Subscriptions"}'
 
+	db_status=$(curl -k "$url/admin/databases?name=$database" --cert "$cert" --key "$key" --write-out "%{http_code}" --silent --output /dev/null)
+	
+	if [[ "$db_status" = "404" ]]; then
+    echo "destination DB '$database' does not exist, creating:"
+
+    destination_db_options=$(printf '{"DatabaseName":"%s","Settings":{},"Disabled":false,"Encrypted":false,"Topology":{"DynamicNodesDistribution":false}}' "$database")
+
+    curl -k "$url/admin/databases?name=$database&replicationFactor=1" \
+      -X PUT -H 'Content-Type: application/json; charset=UTF-8' \
+      --data-binary "$destination_db_options" --compressed
+	else
+	  echo "destination DB '$database' already exists, will not create. Continuing restore..."
+  fi
+
 	_enc -d -k "$enc" -in "$path" \
 	| curl -fk "$url/databases/$database/smuggler/import" --cert "$cert" --key "$key" -F "$options" -F "file=@-"
 }
