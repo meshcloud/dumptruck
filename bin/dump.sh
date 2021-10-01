@@ -112,7 +112,7 @@ restore_ravendb() {
 
     curl -k "$url/admin/databases?name=$database&replicationFactor=1" \
       -X PUT -H 'Content-Type: application/json; charset=UTF-8' \
-      --data-binary "$destination_db_options" --compressed
+      --data-binary "$destination_db_options" --compressed --cert "$cert" --key "$key"
 	else
 	  echo "destination DB '$database' already exists, will not create. Continuing restore..."
   fi
