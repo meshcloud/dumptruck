@@ -5,7 +5,7 @@ def upload(path, remote, target):
     subprocess.check_call(cmd)
 
 def cleanup(path, remote, target, keep):
-    prefix = ".".join(path.split(".")[0:-3])
+    prefix = ".".join(path.split(".")[0:-3]) + "."
     backups = get_objects(remote, target)
     backups = sorted(b for b in backups if b.startswith(prefix))
     to_delete = backups[0:-keep]
