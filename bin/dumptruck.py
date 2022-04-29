@@ -6,6 +6,7 @@ import os.path
 import subprocess
 import sys
 import traceback
+import re
 from glob import glob
 
 import requests
@@ -16,6 +17,7 @@ import rclone
 
 ROOT = os.path.dirname(os.path.realpath(__file__))
 DUMP = ROOT + "/dump.sh"
+
 
 def backup_all(encryption, sources, storage, monitor=None):
     for source in sources:
@@ -35,6 +37,35 @@ def backup_all(encryption, sources, storage, monitor=None):
             remove_files()
 
 
+def flatten_sources(sources, monitor=None):
+    for source in sources:
+        if "database_regex" in source:
+            try:
+                databases = existing_ravendb_databases(**source)
+                for db in databases:
+                    plain_source = dict(source)
+                    plain_source["database"] = db
+                    plain_source["name"] = db
+                    del plain_source["database_regex"]
+                    yield plain_source
+            except Exception as e:
+                print("Failed to resolve databases from source:", source["name"], e)
+                notify_failure(source, **monitor)
+                traceback.print_exc()
+        else:
+            yield source
+
+
+def existing_ravendb_databases(url, cert, key, database_regex, **_):
+    resp = requests.get(url + "/databases", cert=(cert, key))
+    pattern = re.compile(database_regex)
+    return [
+        database["Name"]
+        for database in resp.json()["Databases"]
+        if not database["Disabled"] and pattern.match(database["Name"])
+    ]
+
+
 def backup(encryption, source, storage):
     path = dump(encryption, source)
     print("Backup completed:", path)
@@ -49,17 +80,33 @@ def backup(encryption, source, storage):
             rclone.cleanup(path, store["remote"], store["target"], source["keep"])
 
 
-def dump_other(encryption, dbtype, host, username, password, database, name=None, tunnel="", **_):
+def dump_other(
+    encryption, dbtype, host, username, password, database, name=None, tunnel="", **_
+):
     timestamp = time.strftime("%Y%m%d-%H%M", time.gmtime())
 
     path = ".".join((name, timestamp, "gz.enc"))
 
-    cmd = [DUMP, "dump_other", dbtype, host, username, password, database, path, encryption, tunnel]
+    cmd = [
+        DUMP,
+        "dump_other",
+        dbtype,
+        host,
+        username,
+        password,
+        database,
+        path,
+        encryption,
+        tunnel,
+    ]
 
     subprocess.check_call(cmd)
     return path
 
-def dump_ravendb(encryption, timestamp, url, cert, key, database, name, collections=None, **_):
+
+def dump_ravendb(
+    encryption, timestamp, url, cert, key, database, name, collections=None, **_
+):
     path = ".".join((name, timestamp, "ravendbdump.enc"))
     params = [url, cert, key, database, json.dumps(collections), path, encryption]
 
@@ -67,6 +114,7 @@ def dump_ravendb(encryption, timestamp, url, cert, key, database, name, collecti
     subprocess.check_call(cmd)
 
     return path
+
 
 def dump(encryption, source):
     timestamp = time.strftime("%Y%m%d-%H%M", time.gmtime())
@@ -85,32 +133,41 @@ def remove_files():
 
 def notify(source, username, password, url, data):
     url = "{root}/metrics/job/dumptruck/instance/{name}".format(root=url, **source)
-    resp = requests.post(url, data=data, auth=requests.auth.HTTPBasicAuth(username, password))
+    resp = requests.post(
+        url, data=data, auth=requests.auth.HTTPBasicAuth(username, password)
+    )
     print(resp.text)
+
 
 def notify_success(source, username, password, url):
     source = dict(source)
     source.setdefault("database", "")
-    data = "\n".join((
-        '# TYPE backup_time_seconds gauge',
-        '# HELP backup_time_seconds Last Unix time when this source was backed up.',
-        'backup_time_seconds{{database="{database}",type="{dbtype}"}} {time}\n'
-        '# TYPE backup_status gauge',
-        '# HELP backup_status Indicates success/failure of the last backup attempt.',
-        'backup_status{{database="{database}",type="{dbtype}"}} 1\n'
-    )).format(database=source["database"], dbtype=source["dbtype"], time=time.time())
+    data = "\n".join(
+        (
+            "# TYPE backup_time_seconds gauge",
+            "# HELP backup_time_seconds Last Unix time when this source was backed up.",
+            'backup_time_seconds{{database="{database}",type="{dbtype}"}} {time}\n'
+            "# TYPE backup_status gauge",
+            "# HELP backup_status Indicates success/failure of the last backup attempt.",
+            'backup_status{{database="{database}",type="{dbtype}"}} 1\n',
+        )
+    ).format(database=source["database"], dbtype=source["dbtype"], time=time.time())
     notify(source, username, password, url, data)
+
 
 def notify_failure(source, username, password, url):
     source = dict(source)
     source.setdefault("database", "")
 
-    data = "\n".join((
-        '# TYPE backup_status gauge',
-        '# HELP backup_status Indicates success/failure of the last backup attempt.',
-        'backup_status{{database="{database}",type="{dbtype}"}} -1\n'
-    )).format(database=source["database"], dbtype=source["dbtype"])
+    data = "\n".join(
+        (
+            "# TYPE backup_status gauge",
+            "# HELP backup_status Indicates success/failure of the last backup attempt.",
+            'backup_status{{database="{database}",type="{dbtype}"}} -1\n',
+        )
+    ).format(database=source["database"], dbtype=source["dbtype"])
     notify(source, username, password, url, data)
+
 
 def restore(name, file, encryption, sources, storage, **_):
     for s in sources:
@@ -145,8 +202,20 @@ def restore(name, file, encryption, sources, storage, **_):
     return restore_other("./" + file, encryption, **source)
 
 
-def restore_other(path, encryption, dbtype, host, username, password, database, tunnel=None, **_):
-    cmd = [DUMP, "restore_other", dbtype, host, username, password, database, path, encryption]
+def restore_other(
+    path, encryption, dbtype, host, username, password, database, tunnel=None, **_
+):
+    cmd = [
+        DUMP,
+        "restore_other",
+        dbtype,
+        host,
+        username,
+        password,
+        database,
+        path,
+        encryption,
+    ]
     if tunnel:
         cmd.append(tunnel)
     subprocess.check_call(cmd)
@@ -185,7 +254,7 @@ def main():
         print(
             "Usage: {} <config.json>  perform database backups according to <config.json>\n",
             "or     {} <config.json> <source_name> perform a single database backup according to <config.json>\n",
-            "or     {} <config.json> <source_name> <dump>  takes settings from <config.json> and downloads <dump> from a storage provider and tries to restore it to the database with name <source>"
+            "or     {} <config.json> <source_name> <dump>  takes settings from <config.json> and downloads <dump> from a storage provider and tries to restore it to the database with name <source>",
         )
 
 
