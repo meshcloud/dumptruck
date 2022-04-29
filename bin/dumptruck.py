@@ -107,9 +107,30 @@ def dump_other(
 def dump_ravendb(
     encryption, timestamp, url, cert, key, database, name, collections=None, **_
 ):
-    path = ".".join((name, timestamp, "ravendbdump.enc"))
-    params = [url, cert, key, database, json.dumps(collections), path, encryption]
+    resp = requests.get(
+        f"{url}/databases/{database}/collections/stats", cert=(cert, key)
+    )
+    if collections:
+        existing_collections = [
+            collection
+            for collection in resp.json()["Collections"].keys()
+            if collection in collections
+        ]
+    else:
+        existing_collections = None
 
+    path = ".".join((name, timestamp, "ravendbdump.enc"))
+    params = [
+        url,
+        cert,
+        key,
+        database,
+        json.dumps(existing_collections),
+        path,
+        encryption,
+    ]
+
+    print(existing_collections)
     cmd = [DUMP, "dump_ravendb", *params]
     subprocess.check_call(cmd)
 
