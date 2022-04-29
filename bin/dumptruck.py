@@ -20,6 +20,7 @@ DUMP = ROOT + "/dump.sh"
 
 
 def backup_all(encryption, sources, storage, monitor=None):
+    sources = flatten_sources(sources, monitor)
     for source in sources:
         try:
             print("Backing up", source["name"], "...")
@@ -39,14 +40,13 @@ def backup_all(encryption, sources, storage, monitor=None):
 
 def flatten_sources(sources, monitor=None):
     for source in sources:
-        if "database_regex" in source:
+        if source["dbtype"] == "ravendbmultiple":
             try:
                 databases = existing_ravendb_databases(**source)
                 for db in databases:
                     plain_source = dict(source)
                     plain_source["database"] = db
                     plain_source["name"] = db
-                    del plain_source["database_regex"]
                     yield plain_source
             except Exception as e:
                 print("Failed to resolve databases from source:", source["name"], e)
@@ -56,9 +56,9 @@ def flatten_sources(sources, monitor=None):
             yield source
 
 
-def existing_ravendb_databases(url, cert, key, database_regex, **_):
+def existing_ravendb_databases(url, cert, key, database, **_):
     resp = requests.get(url + "/databases", cert=(cert, key))
-    pattern = re.compile(database_regex)
+    pattern = re.compile(database)
     return [
         database["Name"]
         for database in resp.json()["Databases"]
@@ -141,7 +141,7 @@ def dump(encryption, source):
     timestamp = time.strftime("%Y%m%d-%H%M", time.gmtime())
     dbtype = source["dbtype"]
 
-    if dbtype == "ravendb":
+    if dbtype.startswith("ravendb"):
         return dump_ravendb(encryption, timestamp, **source)
 
     return dump_other(encryption, **source)
@@ -222,7 +222,7 @@ def restore(name, file, database, encryption, sources, storage, **_):
 
     dbtype = source["dbtype"]
 
-    if dbtype == "ravendb":
+    if dbtype.startswith("ravendb"):
         return restore_ravendb(file, encryption, **source)
 
     return restore_other("./" + file, encryption, **source)
