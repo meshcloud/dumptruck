@@ -190,7 +190,7 @@ def notify_failure(source, username, password, url):
     notify(source, username, password, url, data)
 
 
-def restore(name, file, encryption, sources, storage, **_):
+def restore(name, file, database, encryption, sources, storage, **_):
     for s in sources:
         if s["name"] == name:
             source = s
@@ -199,6 +199,9 @@ def restore(name, file, encryption, sources, storage, **_):
         print("No database '{}' in config.".format(name))
         return
 
+    if database:
+        source["database"] = database
+
     for store in storage:
         try:
             if store["type"] == "swift":
@@ -206,6 +209,8 @@ def restore(name, file, encryption, sources, storage, **_):
                 swift.save_object(token, store["container_url"], file, ".")
             elif store["type"] == "rclone":
                 rclone.save_object(store["remote"], store["target"], file, ".")
+            elif store["type"] == "local":
+                pass
             else:
                 continue
             break
@@ -253,7 +258,18 @@ def restore_ravendb(path, encryption, url, cert, key, database, tunnel=None, **_
     remove_files()
 
 
+def usage():
+    print(
+        "Usage: {} <config.json>  perform database backups according to <config.json>\n",
+        "or     {} <config.json> <source_name> perform a single database backup according to <config.json>\n",
+        "or     {} <config.json> <source_name> <dump>  takes settings from <config.json> and downloads <dump> from a storage provider and tries to restore it to the database with name <source>",
+    )
+
+
 def main():
+    if sys.argv[1] == "-h" or sys.argv[1] == "--help":
+        usage()
+
     path = sys.argv[1]
     with open(path) as f:
         config = json.load(f)
@@ -266,17 +282,19 @@ def main():
         config["sources"] = list(filter(lambda x: x["name"] == name, config["sources"]))
         backup_all(**config)
 
-    elif len(sys.argv) == 4:
+    elif len(sys.argv) >= 4:
         name = sys.argv[2]
         dump = sys.argv[3]
-        restore(name, dump, **config)
+
+        # optionally override database name
+        if len(sys.argv) == 5:
+            database = sys.argv[4]
+        else:
+            database = None
+        restore(name, dump, database, **config)
 
     else:
-        print(
-            "Usage: {} <config.json>  perform database backups according to <config.json>\n",
-            "or     {} <config.json> <source_name> perform a single database backup according to <config.json>\n",
-            "or     {} <config.json> <source_name> <dump>  takes settings from <config.json> and downloads <dump> from a storage provider and tries to restore it to the database with name <source>",
-        )
+        usage()
 
 
 if __name__ == "__main__":
