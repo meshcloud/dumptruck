@@ -111,17 +111,18 @@ def dump_other(
 def dump_ravendb(
     encryption, timestamp, url, cert, key, database, name, collections=None, **_
 ):
-    resp = requests.get(
-        f"{url}/databases/{database}/collections/stats",
-        cert=(cert, key),
-        verify=False,
-    )
     if collections:
+        resp = requests.get(
+            f"{url}/databases/{database}/collections/stats",
+            cert=(cert, key),
+            verify=False,
+        )
         existing_collections = [
             collection
             for collection in resp.json()["Collections"].keys()
             if collection in collections
         ]
+        print("backing up collections:", existing_collections)
     else:
         existing_collections = None
 
@@ -136,7 +137,6 @@ def dump_ravendb(
         encryption,
     ]
 
-    print(existing_collections)
     cmd = [DUMP, "dump_ravendb", *params]
     subprocess.check_call(cmd)
 
