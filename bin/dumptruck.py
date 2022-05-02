@@ -57,7 +57,11 @@ def flatten_sources(sources, monitor=None):
 
 
 def existing_ravendb_databases(url, cert, key, database, **_):
-    resp = requests.get(url + "/databases", cert=(cert, key))
+    resp = requests.get(
+        f"{url}/databases",
+        cert=(cert, key),
+        verify=False,
+    )
     pattern = re.compile(database)
     return [
         database["Name"]
@@ -108,7 +112,9 @@ def dump_ravendb(
     encryption, timestamp, url, cert, key, database, name, collections=None, **_
 ):
     resp = requests.get(
-        f"{url}/databases/{database}/collections/stats", cert=(cert, key)
+        f"{url}/databases/{database}/collections/stats",
+        cert=(cert, key),
+        verify=False,
     )
     if collections:
         existing_collections = [
@@ -155,7 +161,9 @@ def remove_files():
 def notify(source, username, password, url, data):
     url = "{root}/metrics/job/dumptruck/instance/{name}".format(root=url, **source)
     resp = requests.post(
-        url, data=data, auth=requests.auth.HTTPBasicAuth(username, password)
+        url,
+        data=data,
+        auth=requests.auth.HTTPBasicAuth(username, password),
     )
     print(resp.text)
 
