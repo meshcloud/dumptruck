@@ -63,6 +63,8 @@ def existing_ravendb_databases(url, cert, key, database, **_):
         verify=False,
     )
     pattern = re.compile(database)
+    resp.raise_for_status()
+
     return [
         database["Name"]
         for database in resp.json()["Databases"]
@@ -117,6 +119,8 @@ def dump_ravendb(
             cert=(cert, key),
             verify=False,
         )
+        resp.raise_for_status()
+
         existing_collections = [
             collection
             for collection in resp.json()["Collections"].keys()
@@ -272,7 +276,6 @@ def usage():
         "or     {} <config.json> <source_name> perform a single database backup according to <config.json>\n",
         "or     {} <config.json> <source_name> <dump>  takes settings from <config.json> and downloads <dump> from a storage provider and tries to restore it to the database with name <source>",
     )
-
 
 def main():
     if sys.argv[1] == "-h" or sys.argv[1] == "--help":
