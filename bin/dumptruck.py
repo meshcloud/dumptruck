@@ -68,7 +68,9 @@ def existing_ravendb_databases(url, cert, key, database, **_):
     return [
         database["Name"]
         for database in resp.json()["Databases"]
-        if not database["Disabled"] and pattern.match(database["Name"])
+        if not "LoadError" in database
+        and not database["Disabled"]
+        and pattern.match(database["Name"])
     ]
 
 
@@ -276,6 +278,7 @@ def usage():
         "or     {} <config.json> <source_name> perform a single database backup according to <config.json>\n",
         "or     {} <config.json> <source_name> <dump>  takes settings from <config.json> and downloads <dump> from a storage provider and tries to restore it to the database with name <source>",
     )
+
 
 def main():
     if sys.argv[1] == "-h" or sys.argv[1] == "--help":
