@@ -1,11 +1,9 @@
 name: Automate dumptruck release
 # Workflow trigger Event
 on:
-  pull_request_target:
-    types: [assigned, opened, synchronize, reopened]
-    branches:
-      - 'feature/CU-2mjzzkh_Automate-dumptruck-release'
-
+  release:
+    types: [published]
+    
 jobs:
   build:
     name: Push Docker image to Docker Hub
