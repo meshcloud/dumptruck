@@ -1,8 +1,8 @@
 name: Automate dumptruck release
 
-on:
-  release:
-    types: [published]
+n:
+  pull_request_review_comment:
+    types: [ready_for_review]
 
 jobs:
   build:
