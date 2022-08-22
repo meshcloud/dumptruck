@@ -2,7 +2,7 @@ name: Automate dumptruck release
 
 n:
   pull_request_review_comment:
-    types: [ready_for_review]
+    types: [opened, assigned]
 
 jobs:
   build:
