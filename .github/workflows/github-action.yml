@@ -1,8 +1,10 @@
 name: Automate dumptruck release
 # Workflow trigger Event
 on:
-  release:
-    types: [published]
+  pull_request_target:
+    types: [assigned, opened, synchronize, reopened]
+    branches:
+      - 'feature/CU-2mjzzkh_Automate-dumptruck-release'
 
 jobs:
   build:
