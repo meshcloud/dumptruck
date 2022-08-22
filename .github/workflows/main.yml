@@ -1,0 +1,23 @@
+name: Automate dumptruck release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Push Docker image to Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+#  This will create and boot a builder using by default the docker-container builder driver
+        - name: Login to DockerHub Registry
+          uses: docker/login-action@v2
+          with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_PASSWORD }}
+# This action will take care to log in against a Docker registry.     
+        - name: Build and push
+          uses: docker/build-push-action@v3
+          with:
+            push: true
+            tags: meshcloud/dumptruck:latest
