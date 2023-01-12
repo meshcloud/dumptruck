@@ -7,7 +7,7 @@ set -o nounset
 KEY="$(dirname "$(readlink -f "$0")")/key"
 
 _enc() {
-	openssl enc -aes-256-cbc -md sha256 -salt "$@"
+	openssl enc -aes-256-cbc -md sha256 -pbkdf2 -salt "$@"
 }
 
 dump_ravendb() {
