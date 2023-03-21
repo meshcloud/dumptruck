@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: dumptrack
+  IMAGE_NAME: dumptruck
 
 jobs:
   build:
@@ -47,7 +47,7 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@v4
         with:
-          context: dumptrack/
+          context: dumptruck/
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
