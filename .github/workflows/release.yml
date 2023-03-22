@@ -10,7 +10,7 @@ env:
 
 jobs:
   build:
-    name: Push Docker image to Github Container Registry
+    name: Push Docker image to GitHub Container Registry
     runs-on: ubuntu-latest
     permissions:
       contents: read
