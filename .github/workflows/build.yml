@@ -1,4 +1,4 @@
-name: Automate dumptruck release
+name: Build
 # Workflow trigger Event
 on:
   push:
