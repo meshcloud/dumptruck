@@ -1,8 +1,11 @@
 name: Automate dumptruck release
 # Workflow trigger Event
 on:
-  release:
-    types: [published]
+  push:
+    # Publish semver tags as releases.
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [master]
 
 env:
   REGISTRY: ghcr.io
