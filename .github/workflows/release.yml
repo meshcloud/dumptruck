@@ -1,8 +1,11 @@
 name: Automate dumptruck release
 # Workflow trigger Event
 on:
-  release:
-    types: [published]
+  push:
+    # Publish semver tags as releases.
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [master]
 
 env:
   REGISTRY: ghcr.io
@@ -47,7 +50,7 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@v4
         with:
-          context: dumptruck/
+          context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
