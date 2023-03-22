@@ -75,7 +75,7 @@ Though the crontab should be usable with any cron demon we use [supercronic](htt
 
 ### Kubernetes, Cloud Foundry (Docker)
 
-A public docker build of this repo is available at DockerHub [meshcloud/dumptruck](https://hub.docker.com/r/meshcloud/dumptruck/).
+A public container build of this repo is available at ghcr.io [meshcloud/dumptruck](https://github.com/meshcloud/dumptruck/pkgs/container/dumptruck).
 
 The default entrypoint supports **environment variables** for easily bootstrapping a single backup configuration without having to build your own docker image on top of the official build.
 
