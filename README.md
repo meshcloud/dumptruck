@@ -1,6 +1,6 @@
 # Dumptruck
 
-[![Build](https://github.com/meshcloud/dumptruck/actions/workflows/release.yml/badge.svg)](https://github.com/meshcloud/dumptruck/actions/workflows/release.yml)
+[![Build](https://github.com/meshcloud/dumptruck/actions/workflows/build.yml/badge.svg)](https://github.com/meshcloud/dumptruck/actions/workflows/build.yml)
 
 Simple solution for backing up MySQL, PostgreSQL, MongoDB and RavenDB databases to Swift and Rclone targets, while monitoring backups with Prometheus.
 
