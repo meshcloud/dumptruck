@@ -14,7 +14,7 @@ def upload(path, token, container_url):
 
 
 def cleanup(path, token, container_url, keep):
-    prefix = ".".join(path.split(".")[0:-3])
+    prefix = ".".join(path.split(".")[0:-3]) + "."
     backups = get_objects(container_url, token)
     backups = sorted(b for b in backups if b.startswith(prefix))
 
