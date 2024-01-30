@@ -10,7 +10,7 @@ RUN apt-get update \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --chmod=755 bin/ /app
+COPY --chmod=777 bin/ /app
 
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
