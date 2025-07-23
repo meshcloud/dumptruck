@@ -49,6 +49,11 @@
   "monitor": {
     "url": "https://ourpushgateway/",
     "username": "push",
-    "password": "********"
+    "password": "********",
+    "labels": {
+      "namespace": "production",
+      "environment": "prod",
+      "region": "us-east-1"
+    }
   }
 }
