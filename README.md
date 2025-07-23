@@ -62,6 +62,40 @@ We can also use Rclone to store our dumps somewhere. This will require an additi
 }
 ```
 
+### Monitor
+
+The `monitor` section configures a Prometheus Pushgateway for reporting backup metrics. This is optional but recommended for production deployments.
+
+```text
+{
+  "url": "https://ourpushgateway/",
+  "username": "push",
+  "password": "********",
+  "labels": {
+    "namespace": "production",
+    "environment": "prod",
+    "region": "us-east-1"
+  }
+}
+```
+
+The `labels` field is optional and allows you to add custom labels to the metrics. This is particularly useful when using a centralized Pushgateway that receives metrics from multiple environments or namespaces. Common use cases include:
+
+- **Kubernetes deployments**: Add a `namespace` label to identify which Kubernetes namespace the backup is running in
+- **Multi-environment setups**: Add `environment` labels like `dev`, `staging`, `prod`
+- **Multi-region deployments**: Add `region` labels to identify the geographic location
+- **Custom organizational labels**: Add any labels that help with your monitoring and alerting setup
+
+The following metrics are exported to the pushgateway:
+- `backup_time_seconds`: Unix timestamp of the last successful backup
+- `backup_status`: `1` for successful backups, `-1` for failed backups
+
+Both metrics include the following default labels:
+- `database`: The database name being backed up
+- `type`: The database type (mysql, postgres, mongo, etc.)
+
+Plus any custom labels you define in the `labels` configuration.
+
 ### Crontab
 
 The `crontab` determines when and how often backups should be performed. Backups can be performed with different intervals by adding entries for different config files, i.e.:
