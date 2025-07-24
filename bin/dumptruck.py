@@ -178,22 +178,20 @@ def notify_success(source, username, password, url, labels=None):
     source = dict(source)
     source.setdefault("database", "")
 
-    # Build extra labels string from the labels dict
-    extra_labels = ""
-    if labels:
-        for key, value in labels.items():
-            extra_labels += f',{key}="{value}"'
+    default_labels = [f'database="{source["database"]}"', f'type="{source["dbtype"]}"']
+    all_labels = default_labels + [f'{key}="{value}"' for key, value in labels.items()] if labels else default_labels
+    labels_str = ",".join(all_labels)
 
     data = "\n".join(
         (
             "# TYPE backup_time_seconds gauge",
             "# HELP backup_time_seconds Last Unix time when this source was backed up.",
-            'backup_time_seconds{{database="{database}",type="{dbtype}"{extra_labels}}} {time}\n'
+            'backup_time_seconds{{{labels_str}}} {time}\n'
             "# TYPE backup_status gauge",
             "# HELP backup_status Indicates success/failure of the last backup attempt.",
-            'backup_status{{database="{database}",type="{dbtype}"{extra_labels}}} 1\n',
+            'backup_status{{{labels_str}}} 1\n',
         )
-    ).format(database=source["database"], dbtype=source["dbtype"], extra_labels=extra_labels, time=time.time())
+    ).format(labels_str=labels_str, time=time.time())
     notify(source, username, password, url, data)
 
 
@@ -201,19 +199,17 @@ def notify_failure(source, username, password, url, labels=None):
     source = dict(source)
     source.setdefault("database", "")
 
-    # Build extra labels string from the labels dict
-    extra_labels = ""
-    if labels:
-        for key, value in labels.items():
-            extra_labels += f',{key}="{value}"'
+    default_labels = [f'database="{source["database"]}"', f'type="{source["dbtype"]}"']
+    all_labels = default_labels + [f'{key}="{value}"' for key, value in labels.items()] if labels else default_labels
+    labels_str = ",".join(all_labels)
 
     data = "\n".join(
         (
             "# TYPE backup_status gauge",
             "# HELP backup_status Indicates success/failure of the last backup attempt.",
-            'backup_status{{database="{database}",type="{dbtype}"{extra_labels}}} -1\n',
+            'backup_status{{{labels_str}}} -1\n',
         )
-    ).format(database=source["database"], dbtype=source["dbtype"], extra_labels=extra_labels)
+    ).format(labels_str=labels_str)
     notify(source, username, password, url, data)
 
 
