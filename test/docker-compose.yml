@@ -1,0 +1,50 @@
+name: dumptruck-integration
+
+# Integration environment for the full backup -> encrypt -> upload -> retention
+# -> restore cycle. Runs identically locally (make test) and in CI.
+#
+# Storage is an rclone `local` remote, which exercises the real rclone code path
+# without needing cloud credentials.
+
+services:
+  mysql:
+    image: mariadb:12
+    environment:
+      MARIADB_ROOT_PASSWORD: root-pw-not-used-by-dumptruck
+      MARIADB_DATABASE: shop
+      MARIADB_USER: backup
+      MARIADB_PASSWORD: mysql-secret-pw-do-not-log
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: backup
+      POSTGRES_PASSWORD: pg-secret-pw-do-not-log
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backup -d shop"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  tests:
+    # Built by the caller (make test / CI) from the repo Dockerfile.
+    image: dumptruck:integration
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../test:/test:ro
+    tmpfs:
+      # Writable by the unprivileged image user without any chown dance.
+      - /storage:mode=1777
+      - /work:mode=1777
+    working_dir: /work
+    entrypoint: ["/test/run.sh"]
