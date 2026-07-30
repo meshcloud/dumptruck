@@ -88,6 +88,21 @@ def backup(encryption, source, storage):
             rclone.cleanup(path, store["remote"], store["target"], source["keep"])
 
 
+def run_dump(args, encryption, password=None):
+    """Run dump.sh, passing secrets through the environment.
+
+    Secrets must never be passed as command line arguments: subprocess errors
+    embed the full argv in their message, so a failing dump would print the
+    encryption passphrase and database password to the log. argv is also
+    readable by any other process in the container via ps/proc.
+    """
+    env = dict(os.environ, DUMPTRUCK_ENCRYPTION=encryption)
+    if password is not None:
+        env["DUMPTRUCK_DB_PASSWORD"] = password
+
+    subprocess.check_call([DUMP, *args], env=env)
+
+
 def dump_other(
     encryption, dbtype, host, username, password, database, name=None, tunnel="", **_
 ):
@@ -95,20 +110,9 @@ def dump_other(
 
     path = ".".join((name, timestamp, "gz.enc"))
 
-    cmd = [
-        DUMP,
-        "dump_other",
-        dbtype,
-        host,
-        username,
-        password,
-        database,
-        path,
-        encryption,
-        tunnel,
-    ]
+    args = ["dump_other", dbtype, host, username, database, path, tunnel]
 
-    subprocess.check_call(cmd)
+    run_dump(args, encryption, password)
     return path
 
 
@@ -133,18 +137,17 @@ def dump_ravendb(
         existing_collections = None
 
     path = ".".join((name, timestamp, "ravendbdump.enc"))
-    params = [
+    args = [
+        "dump_ravendb",
         url,
         cert,
         key,
         database,
         json.dumps(existing_collections),
         path,
-        encryption,
     ]
 
-    cmd = [DUMP, "dump_ravendb", *params]
-    subprocess.check_call(cmd)
+    run_dump(args, encryption)
 
     return path
 
@@ -254,29 +257,16 @@ def restore(name, file, database, encryption, sources, storage, **_):
 def restore_other(
     path, encryption, dbtype, host, username, password, database, tunnel=None, **_
 ):
-    cmd = [
-        DUMP,
-        "restore_other",
-        dbtype,
-        host,
-        username,
-        password,
-        database,
-        path,
-        encryption,
-    ]
-    if tunnel:
-        cmd.append(tunnel)
-    subprocess.check_call(cmd)
+    args = ["restore_other", dbtype, host, username, database, path, tunnel or ""]
+    run_dump(args, encryption, password)
 
     remove_files()
 
 
 def restore_ravendb(path, encryption, url, cert, key, database, tunnel=None, **_):
-    cmd = [DUMP, "restore_ravendb", url, cert, key, database, path, encryption]
-    if tunnel:
-        cmd.append(tunnel)
-    subprocess.check_call(cmd)
+    # dump.sh does not implement tunneling for RavenDB, so `tunnel` is ignored here.
+    args = ["restore_ravendb", url, cert, key, database, path]
+    run_dump(args, encryption)
 
     remove_files()
 

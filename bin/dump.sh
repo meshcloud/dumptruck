@@ -6,37 +6,48 @@ set -o nounset
 
 KEY="$(dirname "$(readlink -f "$0")")/key"
 
+# Secrets arrive in the environment, never as arguments: subprocess errors in
+# dumptruck.py embed argv in their message, and argv is readable via ps/proc.
+# Callers set DUMPTRUCK_ENCRYPTION, plus DUMPTRUCK_DB_PASSWORD for the
+# dump_other/restore_other entrypoints.
+#
+# Positional arguments, in order:
+#   dump_ravendb     url cert key database collections path
+#   restore_ravendb  url cert key database path
+#   dump_other       dbtype host username database path tunnel
+#   restore_other    dbtype host username database path tunnel
+#
+# `tunnel` is always present and may be empty. Keep in sync with dumptruck.py.
+
 _enc() {
-	openssl enc -aes-256-cbc -md sha256 -pbkdf2 -salt "$@"
+	: "${DUMPTRUCK_ENCRYPTION:?must be set to the encryption passphrase}"
+	openssl enc -aes-256-cbc -md sha256 -pbkdf2 -salt -pass env:DUMPTRUCK_ENCRYPTION "$@"
 }
 
 dump_ravendb() {
-	local url cert key database collections path enc options
+	local url cert key database collections path options
 	url="$1"
 	cert="$2"
 	key="$3"
 	database="$4"
 	collections="$5"
 	path="$6"
-	enc="$7"
 
 	options="$(printf 'DownloadOptions={"Collections":%s,"IncludeExpired":true,"RemoveAnalyzers":false,"OperateOnTypes":"DatabaseRecord,Documents,Conflicts,Indexes,Identities,CompareExchange,CounterGroups,Attachments,Subscriptions","MaxStepsForTransformScript":10000}' "$collections")"
 
 	curl -sfk "$url/databases/$database/smuggler/export" --cert "$cert" --key "$key" --data-binary "$options" \
-		| _enc -k "$enc" -out "$path"
+		| _enc -out "$path"
 }
 
 dump_other() {
-	local dbtype host username password db path enc collections tunnel port
+	local dbtype host username password db path tunnel port
 	dbtype="$1"
 	host="$2"
 	username="$3"
-	password="$4"
-	db="$5"
-	path="$6"
-	enc="$7"
-	collections="${8:-}"
-	tunnel="${9:-}"
+	db="$4"
+	path="$5"
+	tunnel="${6:-}"
+	password="${DUMPTRUCK_DB_PASSWORD:-}"
 
 	port="$(dbport "$dbtype")"
 
@@ -47,7 +58,7 @@ dump_other() {
 
 	case $dbtype in
 		mysql)
-			mysqldump --opt -h "$host" -u "$username" -p"$password" "$db"
+			MYSQL_PWD="$password" mysqldump --opt -h "$host" -u "$username" "$db"
 			;;
 		mongo)
 			mongodump --quiet --host="$host" --username="$username" --password="$password" --db="$db" --archive
@@ -57,31 +68,31 @@ dump_other() {
 			;;
 	esac \
 		| gzip - \
-		| _enc -k "$enc" -out "$path"
+		| _enc -out "$path"
 }
 
 restore_other() {
-	local dbtype host username password db path enc port
+	local dbtype host username password db path tunnel port
 	dbtype="$1"
 	host="$2"
 	username="$3"
-	password="$4"
-	db="$5"
-	path="$6"
-	enc="$7"
+	db="$4"
+	path="$5"
+	tunnel="${6:-}"
+	password="${DUMPTRUCK_DB_PASSWORD:-}"
 
 	port="$(dbport "$dbtype")"
 
-	if [[ $# -gt 7 ]]; then
-		tunnel "$host" "$8" "$port"
+	if [[ -n $tunnel ]]; then
+		tunnel "$host" "$tunnel" "$port"
 		host="127.0.0.1"
 	fi
 
-	_enc -d -k "$enc" -in "$path" \
+	_enc -d -in "$path" \
 	| gunzip - \
 	| case $dbtype in
 		mysql)
-			mysql -h "$host" -u "$username" -p"$password" "$db"
+			MYSQL_PWD="$password" mysql -h "$host" -u "$username" "$db"
 			;;
 		mongo)
 			mongorestore -vvv --host="$host" --username="$username" --password="$password" --db="$db" --archive --nsFrom='$prefix$.$suffix$' --nsTo="$db.\$suffix\$" --nsInclude="*"
@@ -93,13 +104,12 @@ restore_other() {
 }
 
 restore_ravendb() {
-	local url cert key database path enc options
+	local url cert key database path options
 	url="$1"
 	cert="$2"
 	key="$3"
 	database="$4"
 	path="$5"
-	enc="$6"
 
 	options='importOptions={"IncludeExpired":true,"RemoveAnalyzers":false,"OperateOnTypes":"DatabaseRecord,Documents,Conflicts,Indexes,RevisionDocuments,Identities,CompareExchange,Counters,Attachments,Subscriptions"}'
 
@@ -117,7 +127,7 @@ restore_ravendb() {
 	  echo "destination DB '$database' already exists, will not create. Continuing restore..."
   fi
 
-	_enc -d -k "$enc" -in "$path" \
+	_enc -d -in "$path" \
 	| curl -fk "$url/databases/$database/smuggler/import" --cert "$cert" --key "$key" -F "$options" -F "file=@-"
 }
 
