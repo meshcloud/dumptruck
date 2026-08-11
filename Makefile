@@ -1,6 +1,6 @@
 .PHONY: build release test test-down
 
-VERSION=1.1
+VERSION=v1.4.1
 
 build:
 	docker build . -t meshcloud/dumptruck
@@ -17,8 +17,8 @@ test:
 test-down:
 	docker compose -f test/docker-compose.yml down -v --remove-orphans
 
-release: build
-	git tag $(VERSION)
-	docker tag meshcloud/dumptruck meshcloud/dumptruck:$(VERSION)
-	docker push meshcloud/dumptruck 
-	docker push meshcloud/dumptruck:$(VERSION)
+# Images are built and pushed to ghcr.io by .github/workflows/build.yml, which
+# triggers on v*.*.* tags. Pushing the tag is the whole release.
+release: test
+	git tag -a $(VERSION) -m "$(VERSION)"
+	git push origin $(VERSION)
