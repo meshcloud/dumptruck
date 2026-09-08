@@ -58,7 +58,9 @@ dump_other() {
 
 	case $dbtype in
 		mysql)
-			MYSQL_PWD="$password" mysqldump --opt -h "$host" -u "$username" "$db"
+			# --opt implies --lock-tables, which blocks every write to the schema for the whole dump;
+			# an InnoDB snapshot is just as consistent and holds no lock.
+			MYSQL_PWD="$password" mysqldump --opt --single-transaction --skip-lock-tables -h "$host" -u "$username" "$db"
 			;;
 		mongo)
 			mongodump --quiet --host="$host" --username="$username" --password="$password" --db="$db" --archive

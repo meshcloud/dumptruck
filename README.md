@@ -140,8 +140,9 @@ This builds the image and runs the integration suite in `test/`, which exercises
 the real backup cycle — dump, encrypt, upload through rclone, retention, and
 restore — against live MariaDB and PostgreSQL containers. It asserts that the
 restored data matches, that stored artefacts are encrypted rather than
-plaintext, that metrics reach a stand-in Pushgateway, and that no secret appears
-in the log. The same command runs in CI on every pull request.
+plaintext, that metrics reach a stand-in Pushgateway, that no secret appears
+in the log, and that a write during a MariaDB dump is neither blocked nor part
+of the dump. The same command runs in CI on every pull request.
 
 ## Restore
 

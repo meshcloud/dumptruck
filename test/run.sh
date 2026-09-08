@@ -18,6 +18,8 @@ PUSHED="$WORK/pushed.log"
 # A distinctive value seeded into both databases, used to prove the dump really
 # contains the data and that the stored artefact is not plaintext.
 CANARY="canary-6f2a1c-row"
+# Written while the mysql dump is still running; must be live in the database but absent from the dump.
+DURING="written-during-dump-9b4e"
 
 failures=0
 
@@ -105,6 +107,12 @@ EOF
 
 stored() { find "$STORAGE" -name '*.enc' -type f | sort; }
 stored_count() { stored | wc -l | tr -d ' '; }
+# Non-zero while mysqldump is still reading zz_bulk; a dump connection runs as the same user, so
+# the backup user sees it in the processlist without PROCESS privilege.
+dump_streaming() {
+	mysql_do "SELECT COUNT(*) FROM information_schema.PROCESSLIST
+		WHERE ID <> CONNECTION_ID() AND INFO LIKE 'SELECT %FROM %zz_bulk%'"
+}
 
 main() {
 	mkdir -p "$STORAGE"
@@ -213,6 +221,46 @@ main() {
 		refute "failure log is free of ${secret:0:12}..." grep -qa "$secret" "$WORK/fail.log"
 	done
 	assert "no dump left behind after failure" test "$(find "$WORK" -name '*.enc' | wc -l | tr -d ' ')" -eq 0
+
+	info "a write during the backup is neither blocked nor part of the dump"
+	# mysqldump dumps tables alphabetically, so `items` is finished while `zz_bulk`
+	# is still streaming. With --lock-tables every table in the schema stayed
+	# read-locked until the dump ended, so a write into `items` at that point is
+	# the case that used to block. It must land in the database and stay out of
+	# the snapshot.
+	mysql_do "DROP TABLE IF EXISTS zz_bulk;
+		CREATE TABLE zz_bulk (id INT PRIMARY KEY, payload CHAR(128) CHARACTER SET ascii);
+		INSERT INTO zz_bulk SELECT seq, SHA2(seq, 512) FROM seq_1_to_1000000;"
+	/app/dumptruck.py "$WORK/config.json" mysql-shop > "$WORK/concurrent.log" 2>&1 &
+	local dump_pid=$!
+	local streaming=1
+	for _ in $(seq 600); do
+		if [[ "$(dump_streaming)" != "0" ]]; then
+			streaming=0
+			break
+		fi
+		sleep 0.1
+	done
+	assert "dump observed streaming zz_bulk, items already dumped" test "$streaming" -eq 0
+	local started
+	started=$(date +%s%N)
+	if MYSQL_PWD="$MYSQL_PW" timeout 10 mariadb -h mysql -u backup shop \
+			-e "INSERT INTO items VALUES (3, '$DURING'); UPDATE items SET label = '$DURING' WHERE id = 2;"; then
+		ok "insert and update returned after $(( ($(date +%s%N) - started) / 1000000 )) ms"
+	else
+		bad "insert or update blocked or failed (exit $?)"
+	fi
+	# With --lock-tables the writes only return once the dump has released its locks, i.e. after it is done.
+	assert "dump was still streaming zz_bulk when the writes returned" test "$(dump_streaming)" != "0"
+	wait "$dump_pid" || bad "concurrent backup exited non-zero"
+	sed 's/^/  | /' "$WORK/concurrent.log"
+	assert "writes are in the live database" test \
+		"$(mysql_do "SELECT COUNT(*) FROM items WHERE label = '$DURING'")" = "2"
+	DUMPTRUCK_ENCRYPTION="$ENC" openssl enc -d -aes-256-cbc -md sha256 -pbkdf2 -pass env:DUMPTRUCK_ENCRYPTION \
+		-in "$(stored | grep mysql-shop | tail -1)" | gunzip > "$WORK/concurrent.sql"
+	assert "dump contains the seeded canary" grep -q "$CANARY" "$WORK/concurrent.sql"
+	assert "dump contains the pre-update label" grep -q "second-row" "$WORK/concurrent.sql"
+	refute "dump does not contain the rows written meanwhile" grep -q "$DURING" "$WORK/concurrent.sql"
 
 	info "summary"
 	if [[ $failures -eq 0 ]]; then
