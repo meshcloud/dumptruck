@@ -26,6 +26,7 @@ Timestamps of successful backups are exported to a [Prometheus push gateway](htt
 {
   "name": "db-prod",           // internal name for this data source - used to generate filenames
   "dbtype": "mysql",           // supported databases are 'mysql', 'postgres' and 'mongo'
+                               // mysql dumps use --single-transaction: consistent for InnoDB tables only
   "host": "db-galera-prod-0",
   "database": "data",          // actual database name
   "username": "backup",        // database credentials
@@ -140,8 +141,9 @@ This builds the image and runs the integration suite in `test/`, which exercises
 the real backup cycle — dump, encrypt, upload through rclone, retention, and
 restore — against live MariaDB and PostgreSQL containers. It asserts that the
 restored data matches, that stored artefacts are encrypted rather than
-plaintext, that metrics reach a stand-in Pushgateway, and that no secret appears
-in the log. The same command runs in CI on every pull request.
+plaintext, that metrics reach a stand-in Pushgateway, that no secret appears
+in the log, and that a write during a MariaDB dump is neither blocked nor part
+of the dump. The same command runs in CI on every pull request.
 
 ## Restore
 

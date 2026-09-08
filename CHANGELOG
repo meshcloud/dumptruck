@@ -1,3 +1,10 @@
+Unreleased
+====================
+
+* Dump MySQL/MariaDB with `--single-transaction` instead of `--lock-tables`, so a
+  running backup no longer blocks writes. The snapshot is consistent for InnoDB
+  tables only; MyISAM/Aria tables are dumped without a lock
+
 1.4.1 Aug 11, 2026
 ====================
 
